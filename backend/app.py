@@ -11,6 +11,7 @@ from services.cultural_adaptation_service import CulturalAdaptationService
 from services.validation_service import ValidationService
 from services.pdf_processing_service import PDFProcessingService
 from services.text_summarization_service import TextSummarizationService
+from services.sealion_service import SEALionService
 from utils.error_handler import handle_error
 from config.cultural_contexts import CULTURAL_CONTEXTS
 
@@ -27,7 +28,10 @@ allowed_origins = [
     'http://localhost:3002',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
-    'http://127.0.0.1:3002'
+    'http://127.0.0.1:3002',
+    # Add production frontend URLs (update these with your actual Render URLs)
+    'https://meditalks-frontend.onrender.com',
+    'https://your-frontend-name.onrender.com'
 ]
 CORS(app, origins=allowed_origins)
 
@@ -40,6 +44,7 @@ cultural_service = CulturalAdaptationService()
 validation_service = ValidationService()
 pdf_service = PDFProcessingService()
 summarization_service = TextSummarizationService()
+sealion_service = SEALionService()
 
 @app.route('/', methods=['GET'])
 def root():
@@ -66,7 +71,12 @@ def health_check():
         'status': 'OK',
         'timestamp': datetime.now().isoformat(),
         'service': 'MediTalks Backend',
-        'version': '1.0.0'
+        'version': '1.0.0',
+        'ai_services': {
+            'sealion_available': sealion_service.is_available(),
+            'gemini_available': cultural_service.ai_available if hasattr(cultural_service, 'ai_available') else False,
+            'primary_service': 'SEA-Lion' if sealion_service.is_available() else 'Gemini'
+        }
     }), 200
 
 @app.route('/api/cultural-adaptation/generate', methods=['POST'])
@@ -107,8 +117,13 @@ def generate_adaptation():
                 'error': {'message': validation_result['message']}
             }), 400
         
-        # Generate adaptation
-        adapted_message = cultural_service.generate_adaptation(message, context)
+        # Generate adaptation - use SEA-Lion if available, fallback to Gemini
+        if sealion_service.is_available():
+            logger.info("Using SEA-Lion for cultural adaptation")
+            adapted_message = sealion_service.generate_cultural_adaptation(message, context)
+        else:
+            logger.info("Using Gemini for cultural adaptation")
+            adapted_message = cultural_service.generate_adaptation(message, context)
         
         return jsonify({
             'success': True,
@@ -167,15 +182,25 @@ def extract_pdf():
         
         extracted_text = extraction_result['text']
         
-        # Generate detailed summary with explanations
+        # Generate detailed summary with explanations - use SEA-Lion if available
         logger.info(f"Calling summarization service for text length: {len(extracted_text)}")
         logger.info(f"Target language: {target_language}")
         
-        summary_result = summarization_service.analyze_and_summarize(
-            text=extracted_text,
-            target_language=target_language,
-            summary_length='long'
-        )
+        if sealion_service.is_available():
+            logger.info("Using SEA-Lion for PDF summarization")
+            summary = sealion_service.generate_pdf_summary(
+                text=extracted_text,
+                cultural_context=context,
+                target_language=target_language
+            )
+            summary_result = {'summary': summary}
+        else:
+            logger.info("Using Gemini for PDF summarization")
+            summary_result = summarization_service.analyze_and_summarize(
+                text=extracted_text,
+                target_language=target_language,
+                summary_length='long'
+            )
         
         logger.info(f"Summary result: {summary_result}")
         

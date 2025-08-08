@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import './App.css';
 
+// API URL configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function App() {
   const [activeTab, setActiveTab] = useState('text');
   const [message, setMessage] = useState('');
@@ -33,7 +36,7 @@ function App() {
   const testBackendConnection = async () => {
     try {
       console.log('Testing backend connection...');
-      const response = await fetch('http://localhost:5000/api/health', {
+      const response = await fetch(`${API_BASE_URL}/api/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -43,7 +46,15 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         console.log('Backend connection successful:', data);
-        alert(`Backend Status: ${data.status}\nMessage: ${data.message}`);
+        const aiService = data.ai_services?.primary_service || 'Unknown';
+        const sealionStatus = data.ai_services?.sealion_available ? 'Available' : 'Not Available';
+        const geminiStatus = data.ai_services?.gemini_available ? 'Available' : 'Not Available';
+        
+        alert(`Backend Status: ${data.status}\n` +
+              `Service: ${data.service}\n` +
+              `Primary AI: ${aiService}\n` +
+              `SEA-Lion: ${sealionStatus}\n` +
+              `Gemini: ${geminiStatus}`);
       } else {
         throw new Error(`Backend returned ${response.status}`);
       }
@@ -63,7 +74,7 @@ function App() {
     
     try {
       // Call the Python backend API
-      const response = await fetch('http://localhost:5000/api/cultural-adaptation/generate', {
+      const response = await fetch(`${API_BASE_URL}/api/cultural-adaptation/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +146,7 @@ function App() {
         targetLanguage: targetLanguage
       });
 
-      const response = await fetch('http://localhost:5000/api/extract-pdf', {
+      const response = await fetch(`${API_BASE_URL}/api/extract-pdf`, {
         method: 'POST',
         body: formData
       });

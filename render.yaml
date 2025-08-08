@@ -1,0 +1,36 @@
+services:
+  # Backend API
+  - type: web
+    name: meditalks-backend
+    env: python
+    repo: https://github.com/ujjain127/Meditalks
+    rootDir: backend
+    buildCommand: pip install -r requirements-minimal.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    plan: free
+    region: oregon
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false  # Will be set manually in Render dashboard
+      - key: SEALION_API_KEY
+        sync: false  # Will be set manually in Render dashboard
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: False
+      - key: SEALION_API_URL
+        value: https://api.sealion.ai/v1
+
+  # Frontend Static Site
+  - type: web
+    name: meditalks-frontend
+    env: static
+    repo: https://github.com/ujjain127/Meditalks
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./build
+    plan: free
+    region: oregon
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://meditalks-backend.onrender.com
