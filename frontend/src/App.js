@@ -32,38 +32,6 @@ function App() {
     { value: 'tl', label: 'Tagalog (Filipino)' }
   ];
 
-  // Network connectivity test
-  const testBackendConnection = async () => {
-    try {
-      console.log('Testing backend connection...');
-      const response = await fetch(`${API_BASE_URL}/api/health`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Backend connection successful:', data);
-        const aiService = data.ai_services?.primary_service || 'Unknown';
-        const sealionStatus = data.ai_services?.sealion_available ? 'Available' : 'Not Available';
-        const geminiStatus = data.ai_services?.gemini_available ? 'Available' : 'Not Available';
-        
-        alert(`Backend Status: ${data.status}\n` +
-              `Service: ${data.service}\n` +
-              `Primary AI: ${aiService}\n` +
-              `SEA-Lion: ${sealionStatus}\n` +
-              `Gemini: ${geminiStatus}`);
-      } else {
-        throw new Error(`Backend returned ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Backend connection failed:', error);
-      alert(`Backend Connection Failed: ${error.message}\n\nPlease ensure the Flask backend is running on port 5000.`);
-    }
-  };
-
   const handleGenerate = async () => {
     if (!message.trim() || !context) {
       alert('Please enter a medical message and select a cultural context.');
@@ -223,24 +191,6 @@ function App() {
         <div className="container">
           <h1 className="title">MediTalks</h1>
           <p className="subtitle">Adaptive Cultural Contextualization Engine</p>
-          <button 
-            onClick={testBackendConnection}
-            className="connection-test-button"
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              padding: '8px 16px',
-              backgroundColor: '#8b7355',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            Test Backend Connection
-          </button>
         </div>
       </header>
 
