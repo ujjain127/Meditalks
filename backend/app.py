@@ -30,7 +30,7 @@ allowed_origins = [
     'http://127.0.0.1:3001',
     'http://127.0.0.1:3002',
     # Add production frontend URLs (update these with your actual Render URLs)
-    'https://meditalks-frontend.onrender.com',
+    'https://meditalks-prototype.onrender.com',
     'https://your-frontend-name.onrender.com'
 ]
 CORS(app, origins=allowed_origins)
