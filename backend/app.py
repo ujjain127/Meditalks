@@ -138,9 +138,9 @@ def generate_adaptation():
         return jsonify({
             'success': True,
             'data': {
-                'adaptedMessage': adapted_message,
-                'originalMessage': message,
-                'culturalContext': context,
+                'adapted_message': adapted_message,
+                'original_message': message,
+                'cultural_context': context,
                 'timestamp': datetime.now().isoformat()
             }
         }), 200

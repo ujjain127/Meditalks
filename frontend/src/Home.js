@@ -31,6 +31,81 @@ function Home() {
     { value: 'tl', label: 'Tagalog (Filipino)' }
   ];
 
+  // Function to format structured summary from Gemini AI
+  const formatStructuredSummary = (summary) => {
+    if (!summary) return <p>No summary available</p>;
+
+    // Split by sections marked with bold headers
+    const sections = summary.split(/(?=\*\*[A-Z][A-Z\s]+\*\*)/);
+    
+    return sections.map((section, index) => {
+      if (!section.trim()) return null;
+      
+      // Extract section title and content
+      const lines = section.trim().split('\n');
+      let titleLine = lines[0];
+      const content = lines.slice(1).join('\n').trim();
+      
+      // Clean up title by removing asterisks
+      titleLine = titleLine.replace(/\*\*/g, '').trim();
+      
+      // Determine section type and assign professional styling
+      let sectionClass = 'analysis-section';
+      
+      if (titleLine.includes('DOCUMENT SUMMARY')) {
+        sectionClass += ' summary-section';
+      } else if (titleLine.includes('KEY MEDICAL INFORMATION')) {
+        sectionClass += ' medical-info-section';
+      } else if (titleLine.includes('IMPORTANT INSTRUCTIONS')) {
+        sectionClass += ' warning-section';
+      } else if (titleLine.includes('FOLLOW-UP CARE')) {
+        sectionClass += ' followup-section';
+      } else if (titleLine.includes('PATIENT GUIDANCE')) {
+        sectionClass += ' guidance-section';
+      }
+      
+      return (
+        <div key={index} className={sectionClass}>
+          <h6 className="section-title">{titleLine}</h6>
+          <div className="section-content">
+            {content.split('\n').map((line, lineIndex) => {
+              if (!line.trim()) return null;
+              
+              // Format bullet points and sub-items
+              if (line.trim().startsWith('-')) {
+                return (
+                  <div key={lineIndex} className="bullet-point">
+                    {line.trim().substring(1).trim()}
+                  </div>
+                );
+              }
+              
+              // Format bold items
+              if (line.includes('**')) {
+                const parts = line.split('**');
+                return (
+                  <p key={lineIndex} className="content-line">
+                    {parts.map((part, partIndex) => 
+                      partIndex % 2 === 1 ? 
+                        <strong key={partIndex}>{part}</strong> : 
+                        part
+                    )}
+                  </p>
+                );
+              }
+              
+              return (
+                <p key={lineIndex} className="content-line">
+                  {line.trim()}
+                </p>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }).filter(Boolean);
+  };
+
   const handleGenerate = async () => {
     if (!message.trim() || !context) {
       alert('Please enter a medical message and select a cultural context.');
@@ -260,34 +335,9 @@ function Home() {
 
           {pdfResults && (
             <div className="result">
-              <h4>PDF Analysis Results:</h4>
-              <div className="pdf-info">
-                <div className="info-item">
-                  <strong>File:</strong> {pdfResults.fileName}
-                </div>
-                <div className="info-item">
-                  <strong>Detected Language:</strong> {pdfResults.detectedLanguage}
-                </div>
-                <div className="info-item">
-                  <strong>Output Language:</strong> {pdfResults.outputLanguage}
-                </div>
-                <div className="info-item">
-                  <strong>Word Count:</strong> {pdfResults.wordCount}
-                </div>
-                <div className="info-item">
-                  <strong>Cultural Context:</strong> {pdfResults.culturalContext}
-                </div>
-                {pdfResults.analysisSource && (
-                  <div className="info-item">
-                    <strong>AI Service:</strong> {pdfResults.analysisSource}
-                  </div>
-                )}
-              </div>
-              <div className="adapted-message">
-                <strong>Summary & Adaptation:</strong>
-                <div className="summary-content">
-                  {pdfResults.summary}
-                </div>
+              <h4>Document Analysis</h4>
+              <div className="analysis-content">
+                {formatStructuredSummary(pdfResults.summary)}
               </div>
             </div>
           )}

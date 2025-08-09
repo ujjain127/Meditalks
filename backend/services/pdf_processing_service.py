@@ -660,32 +660,39 @@ INSTRUCTIONS:
 5. Highlight important warnings or instructions
 
 ANALYSIS FORMAT:
-Please provide a comprehensive analysis with these sections:
+Please provide a comprehensive analysis with these exact sections:
 
-🏥 **DOCUMENT SUMMARY**
+**DOCUMENT SUMMARY**
 - Brief overview of what this document is about
 - Main purpose (prescription, test results, discharge instructions, etc.)
 
-📋 **KEY MEDICAL INFORMATION**
+**KEY MEDICAL INFORMATION**
 - Important medical terms explained in simple language
 - Medications mentioned (names, purposes, dosages)
 - Medical conditions or diagnoses
 
-⚠️ **IMPORTANT INSTRUCTIONS**
+**IMPORTANT INSTRUCTIONS**
 - Things the patient MUST do
 - Things to avoid
 - Warning signs to watch for
 - When to contact healthcare providers
 
-🗓️ **FOLLOW-UP CARE**
+**FOLLOW-UP CARE**
 - Appointments or tests needed
 - Timeline for medication or treatment
 - Recovery expectations
 
-💡 **PATIENT GUIDANCE**
+**PATIENT GUIDANCE**
 - Practical tips for following instructions
 - Questions to ask healthcare providers
 - Resources for additional support
+
+FORMATTING RULES:
+- Use bullet points (start with -) for lists
+- Bold important terms with **text**
+- Keep each section focused and clear
+- Use simple language appropriate for patients
+- Make sure cultural considerations are integrated naturally
 
 Make sure your response is culturally appropriate and considers the patient's likely concerns and questions.
 """
