@@ -578,3 +578,147 @@ Write everything in {language_name} only.
             summary = summary[:200] + "..."
         
         return summary or "Document content extracted successfully."
+    
+    def analyze_with_gemini(self, text: str, cultural_context: str = 'general', target_language: str = 'en') -> Dict[str, Any]:
+        """
+        Enhanced PDF analysis using Gemini AI with cultural adaptation
+        
+        Args:
+            text (str): Extracted text from PDF
+            cultural_context (str): Cultural context for adaptation
+            target_language (str): Target language for output
+            
+        Returns:
+            Dict containing analysis result
+        """
+        try:
+            if not self.model:
+                logger.error("Gemini model not initialized")
+                return {'success': False, 'error': 'Gemini AI not available'}
+            
+            # Build enhanced prompt for medical document analysis
+            prompt = self._build_gemini_analysis_prompt(text, cultural_context, target_language)
+            
+            # Generate response using Gemini
+            response = self.model.generate_content(prompt)
+            
+            if not response or not response.text:
+                logger.error("Empty response from Gemini API")
+                return {'success': False, 'error': 'Empty response from Gemini'}
+            
+            # Process and format the response
+            analysis_result = self._process_gemini_response(response.text, target_language)
+            
+            return {
+                'success': True,
+                'summary': analysis_result,
+                'source': 'gemini',
+                'cultural_context': cultural_context,
+                'target_language': target_language
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in Gemini analysis: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def _build_gemini_analysis_prompt(self, text: str, cultural_context: str, target_language: str) -> str:
+        """Build enhanced prompt for Gemini analysis"""
+        
+        # Language-specific instructions
+        language_instructions = {
+            'en': 'Respond in clear, simple English',
+            'tl': 'Mag-respond sa madaling unawain na Filipino/Tagalog',
+            'th': 'ตอบเป็นภาษาไทยที่เข้าใจง่าย',
+            'vi': 'Trả lời bằng tiếng Việt dễ hiểu',
+            'ms': 'Jawab dalam Bahasa Melayu yang mudah difahami',
+            'km': 'ឆ្លើយជាភាសាខ្មែរដែលងាយយល់'
+        }
+        
+        # Cultural context considerations
+        cultural_notes = {
+            'filipino': 'Consider Filipino healthcare practices, family involvement in medical decisions, and respect for authority figures.',
+            'thai': 'Consider Thai Buddhist perspectives on health, traditional medicine integration, and family hierarchy in healthcare.',
+            'vietnamese': 'Consider Vietnamese traditional medicine, family-centered care, and communication styles.',
+            'malay': 'Consider Islamic perspectives on health, halal considerations, and community-centered healthcare.',
+            'khmer': 'Consider Cambodian traditional healing practices, Buddhist beliefs, and extended family involvement.'
+        }
+        
+        language_instruction = language_instructions.get(target_language, language_instructions['en'])
+        cultural_note = cultural_notes.get(cultural_context, 'Consider general healthcare best practices.')
+        
+        prompt = f"""
+You are a medical communication expert helping patients understand their medical documents.
+
+DOCUMENT CONTENT:
+{text[:3000]}  # Limit text to avoid token limits
+
+INSTRUCTIONS:
+1. {language_instruction}
+2. {cultural_note}
+3. Focus on practical, actionable information
+4. Use simple, non-technical language
+5. Highlight important warnings or instructions
+
+ANALYSIS FORMAT:
+Please provide a comprehensive analysis with these sections:
+
+🏥 **DOCUMENT SUMMARY**
+- Brief overview of what this document is about
+- Main purpose (prescription, test results, discharge instructions, etc.)
+
+📋 **KEY MEDICAL INFORMATION**
+- Important medical terms explained in simple language
+- Medications mentioned (names, purposes, dosages)
+- Medical conditions or diagnoses
+
+⚠️ **IMPORTANT INSTRUCTIONS**
+- Things the patient MUST do
+- Things to avoid
+- Warning signs to watch for
+- When to contact healthcare providers
+
+🗓️ **FOLLOW-UP CARE**
+- Appointments or tests needed
+- Timeline for medication or treatment
+- Recovery expectations
+
+💡 **PATIENT GUIDANCE**
+- Practical tips for following instructions
+- Questions to ask healthcare providers
+- Resources for additional support
+
+Make sure your response is culturally appropriate and considers the patient's likely concerns and questions.
+"""
+        
+        return prompt
+    
+    def _process_gemini_response(self, response_text: str, target_language: str) -> str:
+        """Process and format Gemini response"""
+        try:
+            # Clean up the response
+            cleaned_response = response_text.strip()
+            
+            # Ensure proper formatting
+            if not cleaned_response.startswith('🏥'):
+                # Add a header if not present
+                header = "📄 **MEDICAL DOCUMENT ANALYSIS**\n\n"
+                cleaned_response = header + cleaned_response
+            
+            # Add language-specific closing note
+            closing_notes = {
+                'en': "\n\n💬 **Note**: If you have questions about this information, please contact your healthcare provider.",
+                'tl': "\n\n💬 **Paalala**: Kung may mga tanong kayo tungkol sa impormasyong ito, makipag-ugnayan sa inyong healthcare provider.",
+                'th': "\n\n💬 **หมายเหตุ**: หากมีคำถามเกี่ยวกับข้อมูลนี้ กรุณาติดต่อผู้ให้บริการทางการแพทย์ของคุณ",
+                'vi': "\n\n💬 **Lưu ý**: Nếu bạn có câu hỏi về thông tin này, vui lòng liên hệ với nhà cung cấp dịch vụ chăm sóc sức khỏe của bạn.",
+                'ms': "\n\n💬 **Nota**: Jika anda mempunyai soalan mengenai maklumat ini, sila hubungi penyedia penjagaan kesihatan anda.",
+                'km': "\n\n💬 **ចំណាំ**: ប្រសិនបើអ្នកមានសំណួរអំពីព័ត៌មាននេះ សូមទាក់ទងអ្នកផ្តល់សេវាថែទាំសុខភាពរបស់អ្នក។"
+            }
+            
+            closing_note = closing_notes.get(target_language, closing_notes['en'])
+            cleaned_response += closing_note
+            
+            return cleaned_response
+            
+        except Exception as e:
+            logger.error(f"Error processing Gemini response: {str(e)}")
+            return response_text  # Return original if processing fails

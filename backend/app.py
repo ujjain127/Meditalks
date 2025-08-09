@@ -66,16 +66,26 @@ def root():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with AI service status"""
+    # Check Gemini availability
+    gemini_available = pdf_service.model is not None
+    
     return jsonify({
         'status': 'OK',
         'timestamp': datetime.now().isoformat(),
         'service': 'MediTalks Backend',
         'version': '1.0.0',
         'ai_services': {
+            'gemini_available': gemini_available,
             'sealion_available': sealion_service.is_available(),
-            'gemini_available': cultural_service.ai_available if hasattr(cultural_service, 'ai_available') else False,
-            'primary_service': 'SEA-Lion' if sealion_service.is_available() else 'Gemini'
+            'primary_service': 'Gemini' if gemini_available else ('SEA-Lion' if sealion_service.is_available() else 'None'),
+            'pdf_analysis': 'Gemini AI' if gemini_available else 'Basic extraction'
+        },
+        'features': {
+            'pdf_processing': True,
+            'cultural_adaptation': True,
+            'multi_language_support': True,
+            'medical_analysis': gemini_available
         }
     }), 200
 
@@ -182,37 +192,55 @@ def extract_pdf():
         
         extracted_text = extraction_result['text']
         
-        # Generate detailed summary with explanations - use SEA-Lion if available
-        logger.info(f"Calling summarization service for text length: {len(extracted_text)}")
+        # Generate detailed summary with explanations - use Gemini as primary
+        logger.info(f"Calling Gemini for PDF analysis, text length: {len(extracted_text)}")
         logger.info(f"Target language: {target_language}")
         
-        if sealion_service.is_available():
-            logger.info("Using SEA-Lion for PDF summarization")
+        # Use Gemini API for PDF analysis and output
+        logger.info("Using Gemini AI for PDF analysis and summarization")
+        summary_result = pdf_service.analyze_with_gemini(
+            text=extracted_text,
+            cultural_context=context,
+            target_language=target_language
+        )
+        
+        # Fallback to SEA-Lion if Gemini fails
+        if not summary_result.get('success', False) and sealion_service.is_available():
+            logger.info("Gemini failed, falling back to SEA-Lion")
             summary = sealion_service.generate_pdf_summary(
                 text=extracted_text,
                 cultural_context=context,
                 target_language=target_language
             )
-            summary_result = {'summary': summary}
+            summary_result = {'summary': summary, 'success': True}
+        
+        logger.info(f"Analysis result: {summary_result}")
+        
+        # Build enhanced response with Gemini analysis
+        if summary_result.get('success', False):
+            response_data = {
+                'summary': summary_result.get('summary', 'Content extracted successfully'),
+                'fileName': file.filename,
+                'detectedLanguage': extraction_result.get('detected_language', 'English'),
+                'outputLanguage': target_language,
+                'wordCount': len(extracted_text.split()),
+                'culturalContext': context,
+                'analysisSource': summary_result.get('source', 'gemini'),
+                'processingSuccess': True
+            }
         else:
-            logger.info("Using Gemini for PDF summarization")
-            summary_result = summarization_service.analyze_and_summarize(
-                text=extracted_text,
-                target_language=target_language,
-                summary_length='long'
-            )
-        
-        logger.info(f"Summary result: {summary_result}")
-        
-        # Build simplified response with only summary
-        response_data = {
-            'summary': summary_result.get('summary', 'Content extracted successfully'),
-            'fileName': file.filename,
-            'detectedLanguage': extraction_result.get('detected_language', 'English'),
-            'outputLanguage': target_language,
-            'wordCount': len(extracted_text.split()),
-            'culturalContext': context
-        }
+            # Fallback response if analysis fails
+            response_data = {
+                'summary': f"Document processed successfully. Content extracted from {file.filename}. Please review the document with your healthcare provider for detailed information.",
+                'fileName': file.filename,
+                'detectedLanguage': extraction_result.get('detected_language', 'English'),
+                'outputLanguage': target_language,
+                'wordCount': len(extracted_text.split()),
+                'culturalContext': context,
+                'analysisSource': 'basic',
+                'processingSuccess': False,
+                'error': summary_result.get('error', 'Analysis service unavailable')
+            }
         
         return jsonify({
             'success': True,
